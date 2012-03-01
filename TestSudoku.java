@@ -4,7 +4,7 @@ public class TestSudoku {
 
 	public static void main(String[] args)
 	{
-		Sudoku puzzleEnviron = new Sudoku( "puzz.txt", "grid.txt" ); // eventually get
+		Sudoku puzzleEnviron = new Sudoku( "puzz.txt", );
 		puzzleEnviron.run( );
 	}
 
