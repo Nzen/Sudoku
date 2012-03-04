@@ -1,43 +1,71 @@
-//package sudoku;
+package sudoku;
 //import java.lang.String;
 
 public class Sudoku
 {
 	private int valLIMIT; // a single limit implies a square puzzle
-	private const int clueOFFSET = 20; // also, ALLCAPS is ugly, I'm trying this out
-	private const int newValReturnOFFSET = 100;
+	private int clueOFFSET = 20; // also, ALLCAPS is ugly, I'm trying this out
+	private int newValReturnOFFSET = 100;
 	private int sqXLIMIT;
 	private int sqYLIMIT; // used in squareConflict( ), assumes rectangular
 	private int temp;
 	private int nX; // vars for next or previous cell; changed by solve( )
 	private int nY;
 	private int guess[ ][ ];
+	private boolean finalAnswerSuccess;
 	
-	public Sudoku( String clueFile ) // ready 12 2 29
+	public Sudoku( String clueFile ) // ready 12 3 3
 	{
 		File4Stream clues = new File4Stream( );
-		clues.open( File4Stream );
+		clues.open( clueFile ); // "puzz.txt" ); //
 		valLIMIT = clues.readInt( );
 		sqXLIMIT = clues.readInt( );
 		sqYLIMIT = clues.readInt( );
+		checkLimits( );
 		// fill puzzle
 		guess = new int[ valLIMIT ][ valLIMIT ];
 		for ( int row = 0; row < valLIMIT; row++ )
 			for ( int cell = 0; cell < valLIMIT; cell++ )
-				inputClues( row, cell, clues.readInt( ) );
+				inputClue( row, cell, clues.readInt( ) );
 		clues.close( );
+		finalAnswerSuccess = false;
 	}
 
-	void inputClues( int row, int cell, int val ) // ready 12 2 29
+	void checkLimits( ) // ready 12 2 29
 	{
-		guess[ row ][ column ] = ( val > 0 ) ? val + clueOFFSET : val; // 0 OR clue + offset
+		if ( valLIMIT != sqXLIMIT * sqYLIMIT )
+		{
+			System.out.print( "Invalid puzzle file, size and square limits conflict." );
+			System.exit( 1 );
+		}
 	}
 
-	public void run( ) // ready 12 2 29
+	void inputClue( int row, int cell, int val ) // ready 12 2 29
+	{
+		guess[ row ][ cell ] = ( val > 0 ) ? val + clueOFFSET : val; // 0 OR clue + offset
+		// aren't ints initialized to 0?
+	}
+
+	public void run( ) // ready 12 3 3
 	{	// change to display & interactive mode when solve works
-		if ( solve( 0, 0 ) )
+		boolean newline = true;
+		solve( 0, 0 );
+		if ( finalAnswerSuccess )
+		{
 			System.out.print( "solved it" );
-			// display or export guess[][]
+			Stream2File printPort = new Stream2File( );
+			printPort.openFile( "solution.txt" );
+			for( int rows[ ] : guess )
+			{
+				for( int guessVal : rows )
+					if ( clueVal( guessVal ) )
+						printPort.output( Integer.toString( guessVal - clueOFFSET ), !newline );
+					else // print normally
+						printPort.output( Integer.toString( guessVal ), !newline );
+				printPort.output( "", newline );
+			}	
+			printPort.closeFile( );
+		}
 		else 
 			System.out.print( "didn't solve it" );
 	}
@@ -46,7 +74,7 @@ public class Sudoku
 	 * Expecting guess has only 0s & clues above clueOFFSET
 	 * Time/Space, time bartered for now: lots of math 
 	 */
-	boolean solve( int x, int y ) // ready 12 2 29
+	void solve( int x, int y ) // ready 12 3 3
 	{
 		if ( clueCell( x, y ) )
 			if ( thisNotLastCell( x, y ) )
@@ -57,23 +85,23 @@ public class Sudoku
 				solve( nX, nY ); // IE nextCell
 			}
 			else
-				return true; // finished successfully
+				finalAnswerSuccess = true;
 		else
 		{		// cell open for guessing
 			guess[ x ][ y ] += 1;
 			if ( guess[ x ][ y ] <= valLIMIT ) // time to test if this guess works
 				if ( conflicts( x, y ) )
-					solve( x, y ); // guess a higher number
+					solve( x, y ); // guess a higher number, or move on
 				else // guess WORKED, no conflict
 					if ( thisNotLastCell( x, y ) )
 					{ // solve next
 						temp = nextCell( x, y );
-						nX = xOfNew( temp );
+						nX = xOfNew( temp ); // or would the JVM optimize these assignments for me?
 						nY = yOfNew( temp );
 						solve( nX, nY ); // IE nextCell
 					}
 					else
-						return true;
+						finalAnswerSuccess = true;
 			else // exhausted possibilities in this cell
 				if ( thisNotFirstCell( x, y ) )
 				{
@@ -86,22 +114,21 @@ public class Sudoku
 				else // backtracked to start
 				{
 					System.out.println( "No solution possible, check if clues entered correctly" );
-					return false; // everything tested, nothing worked
+					finalAnswerSuccess = false; // everything tested, nothing worked
 				}
 		}
-		return false; // assert unreachable, only for eclipse's benefit
 	}
 	
-	int nextCell( int x, int y ) // ready 12 2 29
+	int nextCell( int x, int y ) // ready 12 3 3
 	{
 		// here's something I'll miss from python: multiple return values
 		// for the moment, I will kludge up the same by embedding them as digits
 
-		if ( x < valLIMIT )
+		if ( x < valLIMIT - 1 )
 			return ( x + 1 ) * newValReturnOFFSET + y; // to be broken for parts later
 		else
-			if ( y < valLIMIT )
-				return y + 1; // x is 0
+			if ( y < valLIMIT - 1 )
+				return y + 1; // x returns to 0
 			else // unreachable in normal operation
 				return 0;
 	}
@@ -116,10 +143,9 @@ public class Sudoku
 		return unsplit % newValReturnOFFSET;
 	}
 	
-	int previousCell( int x, int y ) // ready 12 2 29
+	int previousCell( int x, int y ) // ready 12 3 3
 	{
-		// for the moment, I will cludge up the same by embedding them as digits
-
+		// for the moment, I will kludge up the coordinates by embedding them as digits
 		if ( x > 0 )
 			return ( x - 1 ) * newValReturnOFFSET + y; // to be broken for parts later
 		else
@@ -144,7 +170,12 @@ public class Sudoku
 		return guess[ x ][ y ] > clueOFFSET;
 	}
 	
-	boolean conflicts( int x, int y ) // resolve stubs 12 2 29
+	boolean clueVal( int guess ) // ready 12 3 3
+	{
+		return guess > clueOFFSET;
+	}
+	
+	boolean conflicts( int x, int y ) // ready 12 2 29
 	{
 		boolean conflictFound = true;
 		//
@@ -155,38 +186,102 @@ public class Sudoku
 		else if ( aSquareConflict( x, y ) )
 			return conflictFound;
 		else
-			return !conflictFound; // success
+			return ! conflictFound; // success
 	}
 	
-	boolean aRowConflict( int focusX, int focusY ) // stub 12 2 29
+	boolean aRowConflict( int focusX, int focusY ) // ready 12 3 3
 	{
-		// for row
-				//if r, c == foX & foY
-			//		continue
-		//		else
-	//				if val = candidate
-//						return conflictFound
-		return true;
-	}
-	
-	boolean aVerticalConflict( int focusX, int focusY ) // stub 12 2 29
-	{
-		return true;
-	}
-	
-	boolean aSquareConflict( int focusX, int focusY ) // stub 12 2 29
-	{
-		/*
-		get to upper left corner
-		for rows < sqLim + offset
-			for chars < sqLim + offset
-				if r, c == foX & foY
-					continue
+		boolean conflictFound = true;
+		int candidate = guess[ focusX ][ focusY ];
+		int compare = 0; // garbage
+		for ( int row = 0; row < valLIMIT; row++ )
+			if ( row == focusX )
+				continue;
+			else
+				if ( clueCell( row, focusY ) )
+					compare = guess[ row ][ focusY ] - clueOFFSET;
 				else
-					if val = candidate
+					compare = guess[ row ][ focusY ];
+				if ( compare == candidate )
+					return conflictFound;
+		return ! conflictFound;
+	}
+	
+	boolean aVerticalConflict( int focusX, int focusY ) // ready 12 3 3
+	{
+		boolean conflictFound = true;
+		int candidate = guess[ focusX ][ focusY ];
+		int compare = 0; // garbage
+		for ( int cell = 0; cell < valLIMIT; cell++ )
+			if ( cell == focusY )
+				continue;
+			else
+				if ( clueCell( focusX, cell ) )
+					compare = guess[ focusX ][ cell ] - clueOFFSET;
+				else
+					compare = guess[ focusX ][ cell ];
+				if ( compare == candidate )
+					return conflictFound;
+		return ! conflictFound;
+	}
+	
+	boolean aSquareConflict( int focusX, int focusY ) // ready 12 3 3
+	{
+		boolean conflictFound = true;
+		int candidate = guess[ focusX ][ focusY ];
+		int compare = 0;
+		temp = upperLeftCorner( focusX, focusY );
+		nX = xOfNew( temp );
+		nY = yOfNew( temp );
+		for ( int row = nX; row < sqXLIMIT + nX; row++ )
+			for ( int cell = nY; cell < sqYLIMIT + nY; cell++ )
+				if ( row == focusX && cell == focusY )
+					continue;
+				else
+					if ( clueCell( row, cell ) )
+						compare = guess[ row ][ cell ] - clueOFFSET;
+					else
+						compare = guess[ row ][ cell ];
+					if ( compare == candidate )
 						return conflictFound;
 		return ! conflictFound; // success
-		*/
-		return true;
+	}
+	
+	int upperLeftCorner( int x, int y ) // ready 12 3 2
+	{
+		// find the x distance from nearest multiple
+		for ( int multiple = 1; multiple <= sqXLIMIT; multiple++ )
+		{
+			if ( ( multiple * sqXLIMIT ) > x ) // 3 > 2
+				nX = ( multiple - 1 ) * sqXLIMIT; // 1-1 * 3 = 0
+		}
+		// find the y distance from nearest multiple
+		for ( int multiple = 1; multiple <= sqYLIMIT; multiple++ )
+		{
+			if ( ( multiple * sqYLIMIT ) > x ) // 3 > 2
+				nY = ( multiple - 1 ) * sqYLIMIT; // 1-1 * 3 = 0
+		}
+		return nX * newValReturnOFFSET + nY;
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

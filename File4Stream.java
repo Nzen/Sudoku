@@ -5,13 +5,14 @@
 
 // updated 11 5 24, unit tests ok
 
+package sudoku;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.lang.IllegalStateException;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 
-public class File4Stream_intAr
+public class File4Stream
 {
 	private Scanner input;
 
@@ -23,7 +24,7 @@ public class File4Stream_intAr
 		}
 		catch ( FileNotFoundException fileNotFoundException )
 		{
-			System.err.println( "Error opening file." );
+			System.err.println( "Error opening file, not found." );
 			System.exit( 1 ); // or try again
 		}
 	}
@@ -48,6 +49,7 @@ public class File4Stream_intAr
 			System.err.println( "Error reading from file." );
 			System.exit( 1 );
 		}
+		return -1; // assert unreachable
 	}
 
 	public void close( )
