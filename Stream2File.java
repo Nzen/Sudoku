@@ -2,14 +2,14 @@
 // created 11 3 28
 // updated 11 4 19 (now prints a string rather than a specific sequence)
 
-// uses formatter to print an ascii file. better version uses probably fileWriter instead
+// uses formatter to print an ascii file. upgrade to fileWriter later
 
 package sudoku;
 import java.io.FileNotFoundException;
 import java.lang.SecurityException;
 import java.util.FormatterClosedException;
 import java.util.NoSuchElementException;
-import java.util.Formatter; // can serve as either ostream or cout equivalent
+import java.util.Formatter; // backbone
 
 public class Stream2File
 {

@@ -52,7 +52,7 @@ public class Sudoku
 		solve( 0, 0 );
 		if ( finalAnswerSuccess )
 		{
-			System.out.print( "solved it" );
+			System.out.print( "Check if I solved it" );
 			Stream2File printPort = new Stream2File( );
 			printPort.openFile( "solution.txt" );
 			for( int rows[ ] : guess )
@@ -67,7 +67,7 @@ public class Sudoku
 			printPort.closeFile( );
 		}
 		else 
-			System.out.print( "didn't solve it" );
+			System.out.print( "I didn't solve it" );
 	}
 	
 	/*
@@ -186,16 +186,34 @@ public class Sudoku
 		else if ( aSquareConflict( x, y ) )
 			return conflictFound;
 		else
-			return ! conflictFound; // success
+			return !conflictFound; // success
 	}
 	
 	boolean aRowConflict( int focusX, int focusY ) // ready 12 3 3
 	{
 		boolean conflictFound = true;
 		int candidate = guess[ focusX ][ focusY ];
+		int compare = 0;
+		for ( int cell = 0; cell < valLIMIT; cell++ )
+			if ( cell == focusY )
+				continue;
+			else
+				if ( clueCell( cell, focusY ) )
+					compare = guess[ focusX ][ cell ] - clueOFFSET;
+				else
+					compare = guess[ focusX ][ cell ];
+				if ( compare == candidate )
+					return conflictFound;
+		return !conflictFound;
+	}
+	
+	boolean aVerticalConflict( int focusX, int focusY ) // ready 12 3 3
+	{
+		boolean conflictFound = true;
+		int candidate = guess[ focusX ][ focusY ];
 		int compare = 0; // garbage
 		for ( int row = 0; row < valLIMIT; row++ )
-			if ( row == focusX )
+			if ( row == focusY )
 				continue;
 			else
 				if ( clueCell( row, focusY ) )
@@ -204,25 +222,7 @@ public class Sudoku
 					compare = guess[ row ][ focusY ];
 				if ( compare == candidate )
 					return conflictFound;
-		return ! conflictFound;
-	}
-	
-	boolean aVerticalConflict( int focusX, int focusY ) // ready 12 3 3
-	{
-		boolean conflictFound = true;
-		int candidate = guess[ focusX ][ focusY ];
-		int compare = 0; // garbage
-		for ( int cell = 0; cell < valLIMIT; cell++ )
-			if ( cell == focusY )
-				continue;
-			else
-				if ( clueCell( focusX, cell ) )
-					compare = guess[ focusX ][ cell ] - clueOFFSET;
-				else
-					compare = guess[ focusX ][ cell ];
-				if ( compare == candidate )
-					return conflictFound;
-		return ! conflictFound;
+		return !conflictFound;
 	}
 	
 	boolean aSquareConflict( int focusX, int focusY ) // ready 12 3 3
@@ -244,7 +244,7 @@ public class Sudoku
 						compare = guess[ row ][ cell ];
 					if ( compare == candidate )
 						return conflictFound;
-		return ! conflictFound; // success
+		return !conflictFound; // success
 	}
 	
 	int upperLeftCorner( int x, int y ) // ready 12 3 2
