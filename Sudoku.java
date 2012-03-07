@@ -12,7 +12,7 @@ public class Sudoku
 	private int nX; // vars for next or previous cell; changed by solve( )
 	private int nY;
 	private int guess[ ][ ];
-	private boolean finalAnswerSuccess;
+	private boolean success;
 	
 	public Sudoku( String clueFile ) // ready 12 3 3
 	{
@@ -28,7 +28,7 @@ public class Sudoku
 			for ( int cell = 0; cell < valLIMIT; cell++ )
 				inputClue( row, cell, clues.readInt( ) );
 		clues.close( );
-		finalAnswerSuccess = false;
+		success = true;
 	}
 
 	void checkLimits( ) // ready 12 2 29
@@ -49,8 +49,7 @@ public class Sudoku
 	public void run( ) // ready 12 3 3
 	{	// change to display & interactive mode when solve works
 		boolean newline = true;
-		solve( 0, 0 );
-		if ( finalAnswerSuccess )
+		if ( solve( 0, 0 ) ) //finalAnswerSuccess )
 		{
 			System.out.print( "Check if I solved it" );
 			Stream2File printPort = new Stream2File( );
@@ -74,7 +73,7 @@ public class Sudoku
 	 * Expecting guess has only 0s & clues above clueOFFSET
 	 * Time/Space, time bartered for now: lots of math 
 	 */
-	void solve( int x, int y ) // ready 12 3 3
+	boolean solve( int x, int y ) // ready 12 3 6
 	{
 		if ( clueCell( x, y ) )
 			if ( thisNotLastCell( x, y ) )
@@ -82,26 +81,26 @@ public class Sudoku
 				temp = nextCell( x, y );
 				nX = xOfNew( temp ); // this is what I wanted to avoid with python
 				nY = yOfNew( temp ); // solve(x,y) should have been 15 lines
-				solve( nX, nY ); // IE nextCell
+				return solve( nX, nY ); // IE nextCell
 			}
 			else
-				finalAnswerSuccess = true;
+				return success; // last was a clue
 		else
 		{		// cell open for guessing
 			guess[ x ][ y ] += 1;
 			if ( guess[ x ][ y ] <= valLIMIT ) // time to test if this guess works
 				if ( conflicts( x, y ) )
-					solve( x, y ); // guess a higher number, or move on
+					return solve( x, y ); // guess a higher number, or move on
 				else // guess WORKED, no conflict
 					if ( thisNotLastCell( x, y ) )
 					{ // solve next
 						temp = nextCell( x, y );
 						nX = xOfNew( temp ); // or would the JVM optimize these assignments for me?
 						nY = yOfNew( temp );
-						solve( nX, nY ); // IE nextCell
+						return solve( nX, nY ); // IE nextCell
 					}
 					else
-						finalAnswerSuccess = true;
+						return success; // this guess was last, nothing conflicts
 			else // exhausted possibilities in this cell
 				if ( thisNotFirstCell( x, y ) )
 				{
@@ -109,13 +108,10 @@ public class Sudoku
 					temp = previousCell( x, y );
 					nX = xOfNew( temp ); //
 					nY = yOfNew( temp );
-					solve( nX, nY ); // IE previousCell
+					return solve( nX, nY ); // IE previousCell
 				}
 				else // backtracked to start
-				{
-					System.out.println( "No solution possible, check if clues entered correctly" );
-					finalAnswerSuccess = false; // everything tested, nothing worked
-				}
+					return !success; // everything tested, nothing worked
 		}
 	}
 	
