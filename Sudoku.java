@@ -5,7 +5,6 @@ public class Sudoku
 {
 	private int valLIMIT; // a single limit implies a square puzzle
 	private int clueOFFSET = 20; // also, ALLCAPS is ugly, I'm trying this out
-	private int newValReturnOFFSET = 100;
 	private int sqXLIMIT;
 	private int sqYLIMIT; // used in squareConflict( ), assumes rectangular
 	private int temp;
@@ -45,48 +44,49 @@ public class Sudoku
 		guess[ row ][ cell ] = ( val > 0 ) ? val + clueOFFSET : val; // 0 OR clue + offset
 		// aren't ints initialized to 0?
 	}
+	
+	void outputSolution( )
+	{
+		System.out.print( "Check if I solved it" );
+		Stream2File printPort = new Stream2File( );
+		printPort.openFile( "solution.txt" );
+		for( int rows[ ] : guess )
+		{
+			for( int guessVal : rows )
+				if ( clueVal( guessVal ) )
+					printPort.output( Integer.toString( guessVal - clueOFFSET ), !newline );
+				else // print normally
+					printPort.output( Integer.toString( guessVal ), !newline );
+			printPort.output( "", newline );
+		}	
+		printPort.closeFile( );
+	}
 
 	public void run( ) // ready 12 3 3
 	{	// change to display & interactive mode when solve works
 		boolean newline = true;
 		if ( solve( 0, 0 ) ) //finalAnswerSuccess )
-		{
-			System.out.print( "Check if I solved it" );
-			Stream2File printPort = new Stream2File( );
-			printPort.openFile( "solution.txt" );
-			for( int rows[ ] : guess )
-			{
-				for( int guessVal : rows )
-					if ( clueVal( guessVal ) )
-						printPort.output( Integer.toString( guessVal - clueOFFSET ), !newline );
-					else // print normally
-						printPort.output( Integer.toString( guessVal ), !newline );
-				printPort.output( "", newline );
-			}	
-			printPort.closeFile( );
-		}
+			outputSolution( );
 		else 
 			System.out.print( "I didn't solve it" );
 	}
 	
-	/*
+	/**
 	 * Expecting guess has only 0s & clues above clueOFFSET
 	 * Time/Space, time bartered for now: lots of math 
-	 */
+	 **/
 	boolean solve( int x, int y ) // ready 12 3 6
 	{
 		if ( clueCell( x, y ) )
 			if ( thisNotLastCell( x, y ) )
 			{	// move to next
-				temp = nextCell( x, y );
-				nX = xOfNew( temp ); // this is what I wanted to avoid with python
-				nY = yOfNew( temp ); // solve(x,y) should have been 15 lines
+				nextCell( x, y );
 				return solve( nX, nY ); // IE nextCell
 			}
 			else
-				return success; // last was a clue
+				return success; // last cell was a clue
 		else
-		{		// cell open for guessing
+		{	// cell open for guessing
 			guess[ x ][ y ] += 1;
 			if ( guess[ x ][ y ] <= valLIMIT ) // time to test if this guess works
 				if ( conflicts( x, y ) )
@@ -94,9 +94,7 @@ public class Sudoku
 				else // guess WORKED, no conflict
 					if ( thisNotLastCell( x, y ) )
 					{ // solve next
-						temp = nextCell( x, y );
-						nX = xOfNew( temp ); // or would the JVM optimize these assignments for me?
-						nY = yOfNew( temp );
+						nextCell( x, y );
 						return solve( nX, nY ); // IE nextCell
 					}
 					else
@@ -105,50 +103,42 @@ public class Sudoku
 				if ( thisNotFirstCell( x, y ) )
 				{
 					guess[ x ][ y ] = 0; // reset this cell
-					temp = previousCell( x, y );
-					nX = xOfNew( temp ); //
-					nY = yOfNew( temp );
+					previousCell( x, y );
 					return solve( nX, nY ); // IE previousCell
 				}
 				else // backtracked to start
 					return !success; // everything tested, nothing worked
 		}
 	}
-	
-	int nextCell( int x, int y ) // ready 12 3 3
-	{
-		// here's something I'll miss from python: multiple return values
-		// for the moment, I will kludge up the same by embedding them as digits
 
+	/**
+	Calculates the new cell coordinates and stores in nX & nY for immediate use
+	Takes care not to overflow to the right or bottom.
+	**/
+	void nextCell( int x, int y ) // ready 12 3 3
+	{
 		if ( x < valLIMIT - 1 )
-			return ( x + 1 ) * newValReturnOFFSET + y; // to be broken for parts later
+			nX = x + 1;
+			nY = y;
 		else
 			if ( y < valLIMIT - 1 )
-				return y + 1; // x returns to 0
-			else // unreachable in normal operation
-				return 0;
+				nX = 0;
+				nY = y + 1;
 	}
-	
-	int xOfNew( int unsplit ) // ready 12 2 29
+
+	/**
+	Calculates the new cell coordinates and stores in nX & nY for immediate use
+	Takes care not to overflow to the right or bottom.
+	**/
+	void previousCell( int x, int y ) // ready 12 3 3
 	{
-		return unsplit / newValReturnOFFSET;
-	}
-	
-	int yOfNew( int unsplit ) // ready 12 2 29
-	{
-		return unsplit % newValReturnOFFSET;
-	}
-	
-	int previousCell( int x, int y ) // ready 12 3 3
-	{
-		// for the moment, I will kludge up the coordinates by embedding them as digits
 		if ( x > 0 )
-			return ( x - 1 ) * newValReturnOFFSET + y; // to be broken for parts later
+			nX = x - 1;
+			nY = y;
 		else
 			if ( y > 0 )
-				return valLIMIT * newValReturnOFFSET + y - 1; // x wraps back to valLimit
-			else // unreachable in normal operation
-				return ( valLIMIT - 1 ) * newValReturnOFFSET + valLIMIT - 1;
+				nX = valLIMIT; // x wraps back to valLimit
+				nY = y - 1;
 	}
 	
 	boolean thisNotLastCell( int x, int y ) // ready 12 2 29
@@ -226,9 +216,7 @@ public class Sudoku
 		boolean conflictFound = true;
 		int candidate = guess[ focusX ][ focusY ];
 		int compare = 0;
-		temp = upperLeftCorner( focusX, focusY );
-		nX = xOfNew( temp );
-		nY = yOfNew( temp );
+		upperLeftCorner( focusX, focusY );
 		for ( int row = nX; row < sqXLIMIT + nX; row++ )
 			for ( int cell = nY; cell < sqYLIMIT + nY; cell++ )
 				if ( row == focusX && cell == focusY )
@@ -243,7 +231,7 @@ public class Sudoku
 		return !conflictFound; // success
 	}
 	
-	int upperLeftCorner( int x, int y ) // ready 12 3 2
+	void upperLeftCorner( int x, int y ) // ready 12 3 2
 	{
 		// find the x distance from nearest multiple
 		for ( int multiple = 1; multiple <= sqXLIMIT; multiple++ )
@@ -257,7 +245,6 @@ public class Sudoku
 			if ( ( multiple * sqYLIMIT ) > x ) // 3 > 2
 				nY = ( multiple - 1 ) * sqYLIMIT; // 1-1 * 3 = 0
 		}
-		return nX * newValReturnOFFSET + nY;
 	}
 }
 
