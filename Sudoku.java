@@ -7,8 +7,7 @@ public class Sudoku
 	private int clueOFFSET = 20; // also, ALLCAPS is ugly, I'm trying this out
 	private int sqXLIMIT;
 	private int sqYLIMIT; // used in squareConflict( ), assumes rectangular
-	private int temp;
-	private int nX; // vars for next or previous cell; changed by solve( )
+	private int nX; // vars for next or previous cell; changed by solve( ) & upperLeftCorner
 	private int nY;
 	private int guess[ ][ ];
 	private boolean success;
@@ -47,6 +46,7 @@ public class Sudoku
 	
 	void outputSolution( )
 	{
+		boolean newline = true;
 		System.out.print( "Check if I solved it" );
 		Stream2File printPort = new Stream2File( );
 		printPort.openFile( "solution.txt" );
@@ -64,7 +64,6 @@ public class Sudoku
 
 	public void run( ) // ready 12 3 3
 	{	// change to display & interactive mode when solve works
-		boolean newline = true;
 		if ( solve( 0, 0 ) ) //finalAnswerSuccess )
 			outputSolution( );
 		else 
@@ -72,10 +71,9 @@ public class Sudoku
 	}
 	
 	/**
-	 * Expecting guess has only 0s & clues above clueOFFSET
-	 * Time/Space, time bartered for now: lots of math 
+	 * Time/Space: time bartered for now: lots of math 
 	 **/
-	boolean solve( int x, int y ) // ready 12 3 6
+	boolean solve( int x, int y ) // overflowing calls 12 3 14
 	{
 		if ( clueCell( x, y ) )
 			if ( thisNotLastCell( x, y ) )
@@ -87,58 +85,76 @@ public class Sudoku
 				return success; // last cell was a clue
 		else
 		{	// cell open for guessing
-			guess[ x ][ y ] += 1;
-			if ( guess[ x ][ y ] <= valLIMIT ) // time to test if this guess works
-				if ( conflicts( x, y ) )
-					return solve( x, y ); // guess a higher number, or move on
-				else // guess WORKED, no conflict
-					if ( thisNotLastCell( x, y ) )
-					{ // solve next
-						nextCell( x, y );
-						return solve( nX, nY ); // IE nextCell
-					}
-					else
-						return success; // this guess was last, nothing conflicts
+			if ( foundValidGuess( x, y ) )
+				if ( thisNotLastCell( x, y ) )
+				{
+					nextCell( x, y );
+					showGrid( );
+					return solve( nX, nY );
+				}
+				else
+					return success; // this guess was last, nothing conflicts
 			else // exhausted possibilities in this cell
 				if ( thisNotFirstCell( x, y ) )
 				{
 					guess[ x ][ y ] = 0; // reset this cell
 					previousCell( x, y );
-					return solve( nX, nY ); // IE previousCell
+					return solve( nX, nY );
 				}
 				else // backtracked to start
 					return !success; // everything tested, nothing worked
 		}
 	}
-
-	/**
-	Calculates the new cell coordinates and stores in nX & nY for immediate use
-	Takes care not to overflow to the right or bottom.
-	**/
-	void nextCell( int x, int y ) // ready 12 3 3
+	
+	boolean foundValidGuess( int x, int y ) // maybe 12 3 14
 	{
-		if ( x < valLIMIT - 1 )
-			nX = x + 1;
-			nY = y;
-		else
-			if ( y < valLIMIT - 1 )
-				nX = 0;
-				nY = y + 1;
+		while ( guess[ x ][ y ] <= valLIMIT ) // will this overflow valLim? test
+		{
+			guess[ x ][ y ] += 1;
+			if ( conflicts( x, y ) )
+				continue;
+			else
+				return true;
+		}
+		return false;
 	}
 
 	/**
 	Calculates the new cell coordinates and stores in nX & nY for immediate use
 	Takes care not to overflow to the right or bottom.
 	**/
-	void previousCell( int x, int y ) // ready 12 3 3
+	void nextCell( int x, int y ) // ready 12 3 14
+	{
+		if ( x < valLIMIT - 1 )
+		{
+			nX = x + 1;
+			nY = y;
+		}
+		else
+			if ( y < valLIMIT - 1 )
+			{
+				nX = 0;
+				nY = y + 1;
+			}
+	}
+
+	/**
+	Calculates the new cell coordinates and stores in nX & nY for immediate use
+	Takes care not to overflow to the right or bottom.
+	**/
+	void previousCell( int x, int y ) // ready 12 3 14
 	{
 		if ( x > 0 )
+		{
 			nX = x - 1;
 			nY = y;
+		}
 		else
 			if ( y > 0 )
+			{
 				nX = valLIMIT; // x wraps back to valLimit
 				nY = y - 1;
+			}
 	}
 	
 	boolean thisNotLastCell( int x, int y ) // ready 12 2 29
@@ -231,26 +247,47 @@ public class Sudoku
 		return !conflictFound; // success
 	}
 	
-	void upperLeftCorner( int x, int y ) // ready 12 3 2
+	void upperLeftCorner( int x, int y ) // ready 12 3 14
 	{
 		// find the x distance from nearest multiple
 		for ( int multiple = 1; multiple <= sqXLIMIT; multiple++ )
 		{
 			if ( ( multiple * sqXLIMIT ) > x ) // 3 > 2
+			{
 				nX = ( multiple - 1 ) * sqXLIMIT; // 1-1 * 3 = 0
+				break;
+			}
 		}
 		// find the y distance from nearest multiple
 		for ( int multiple = 1; multiple <= sqYLIMIT; multiple++ )
 		{
 			if ( ( multiple * sqYLIMIT ) > x ) // 3 > 2
+			{
 				nY = ( multiple - 1 ) * sqYLIMIT; // 1-1 * 3 = 0
+				break;
+			}
 		}
 	}
+
+	int getNx( )
+	{	return nX;	}
+	
+	int getNy( )
+	{	return nY;	}
+	
+	void showGrid( )
+	{
+		for ( int[] rows : guess )
+		{
+			for ( int marks : rows )
+			{
+				System.out.print( marks + "-" );
+			}
+			System.out.println( );
+		}
+		System.out.print( "\n==\n" );
+	}
 }
-
-
-
-
 
 
 
