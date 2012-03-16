@@ -106,9 +106,9 @@ public class Sudoku
 		}
 	}
 	
-	boolean foundValidGuess( int x, int y ) // maybe 12 3 14
+	boolean foundValidGuess( int x, int y ) // maybe 12 3 16
 	{
-		while ( guess[ x ][ y ] <= valLIMIT ) // will this overflow valLim? test
+		while ( guess[ x ][ y ] < valLIMIT )
 		{
 			guess[ x ][ y ] += 1;
 			if ( conflicts( x, y ) )
@@ -167,6 +167,7 @@ public class Sudoku
 		return x > 0 || y > 0;
 	}
 	
+	/** returns true when cell contains a clue **/
 	boolean clueCell( int x, int y ) // ready 12 2 29
 	{
 		return guess[ x ][ y ] > clueOFFSET;
@@ -191,59 +192,65 @@ public class Sudoku
 			return !conflictFound; // success
 	}
 	
-	boolean aRowConflict( int focusX, int focusY ) // ready 12 3 3
+	boolean aRowConflict( int focusX, int focusY ) // hmm 12 3 16
 	{
 		boolean conflictFound = true;
 		int candidate = guess[ focusX ][ focusY ];
-		int compare = 0;
+		int compareVal;
 		for ( int cell = 0; cell < valLIMIT; cell++ )
 			if ( cell == focusY )
-				continue;
+				continue; // can't conflict with itself
 			else
-				if ( clueCell( cell, focusY ) )
-					compare = guess[ focusX ][ cell ] - clueOFFSET;
+			{
+				if ( clueCell( focusX, cell ) )
+					compareVal = guess[ focusX ][ cell ] - clueOFFSET; // get value
 				else
-					compare = guess[ focusX ][ cell ];
-				if ( compare == candidate )
+					compareVal = guess[ focusX ][ cell ]; // of the cell
+				if ( compareVal == candidate )
 					return conflictFound;
+			}
 		return !conflictFound;
 	}
 	
-	boolean aVerticalConflict( int focusX, int focusY ) // ready 12 3 3
+	boolean aVerticalConflict( int focusX, int focusY ) // hmm 12 3 16
 	{
 		boolean conflictFound = true;
 		int candidate = guess[ focusX ][ focusY ];
-		int compare = 0; // garbage
+		int compareVal = 0; // garbage
 		for ( int row = 0; row < valLIMIT; row++ )
-			if ( row == focusY )
+			if ( row == focusX )
 				continue;
 			else
+			{
 				if ( clueCell( row, focusY ) )
-					compare = guess[ row ][ focusY ] - clueOFFSET;
+					compareVal = guess[ row ][ focusY ] - clueOFFSET;
 				else
-					compare = guess[ row ][ focusY ];
-				if ( compare == candidate )
+					compareVal = guess[ row ][ focusY ];
+				if ( compareVal == candidate )
 					return conflictFound;
+			}
 		return !conflictFound;
 	}
 	
-	boolean aSquareConflict( int focusX, int focusY ) // ready 12 3 3
+	boolean aSquareConflict( int focusX, int focusY ) // hmm 12 3 16
 	{
 		boolean conflictFound = true;
 		int candidate = guess[ focusX ][ focusY ];
-		int compare = 0;
+		int compareVal = 0;
 		upperLeftCorner( focusX, focusY );
 		for ( int row = nX; row < sqXLIMIT + nX; row++ )
 			for ( int cell = nY; cell < sqYLIMIT + nY; cell++ )
 				if ( row == focusX && cell == focusY )
 					continue;
 				else
+				{
 					if ( clueCell( row, cell ) )
-						compare = guess[ row ][ cell ] - clueOFFSET;
+						compareVal = guess[ row ][ cell ] - clueOFFSET;
 					else
-						compare = guess[ row ][ cell ];
-					if ( compare == candidate )
+						compareVal = guess[ row ][ cell ];
+					if ( compareVal == candidate )
 						return conflictFound;
+				}
 		return !conflictFound; // success
 	}
 	
