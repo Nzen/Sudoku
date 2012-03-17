@@ -1,5 +1,4 @@
 package sudoku;
-//import java.lang.String;
 
 public class Sudoku
 {
@@ -64,7 +63,7 @@ public class Sudoku
 
 	public void run( ) // ready 12 3 3
 	{	// change to display & interactive mode when solve works
-		if ( solve( 0, 0 ) ) //finalAnswerSuccess )
+		if ( solve( 0, 0, false ) ) //backtrack )
 			outputSolution( );
 		else 
 			System.out.print( "I didn't solve it" );
@@ -73,36 +72,49 @@ public class Sudoku
 	/**
 	 * Time/Space: time bartered for now: lots of math 
 	 **/
-	boolean solve( int x, int y ) // overflowing calls 12 3 14
+	boolean solve( int x, int y, boolean backtracking ) // stopped early? 12 3 17
 	{
 		if ( clueCell( x, y ) )
-			if ( thisNotLastCell( x, y ) )
+		{
+			if ( backtracking )
+			{
+				previousCell( x, y );
+				return solve( nX, nY, backtracking );
+			}
+			else if ( thisNotLastCell( x, y ) )
 			{	// move to next
 				nextCell( x, y );
-				return solve( nX, nY ); // IE nextCell
+				return solve( nX, nY, backtracking ); // IE nextCell
 			}
 			else
 				return success; // last cell was a clue
+		}
 		else
 		{	// cell open for guessing
 			if ( foundValidGuess( x, y ) )
+			{
+				backtracking = false;
 				if ( thisNotLastCell( x, y ) )
 				{
 					nextCell( x, y );
 					showGrid( );
-					return solve( nX, nY );
+					return solve( nX, nY, backtracking );
 				}
 				else
 					return success; // this guess was last, nothing conflicts
+			}
 			else // exhausted possibilities in this cell
+			{
+				backtracking = true;
 				if ( thisNotFirstCell( x, y ) )
 				{
 					guess[ x ][ y ] = 0; // reset this cell
 					previousCell( x, y );
-					return solve( nX, nY );
+					return solve( nX, nY, backtracking );
 				}
 				else // backtracked to start
 					return !success; // everything tested, nothing worked
+			}
 		}
 	}
 	
@@ -111,7 +123,7 @@ public class Sudoku
 		while ( guess[ x ][ y ] < valLIMIT )
 		{
 			guess[ x ][ y ] += 1;
-			if ( conflicts( x, y ) )
+			if ( guessConflicts( x, y ) )
 				continue;
 			else
 				return true;
@@ -142,7 +154,7 @@ public class Sudoku
 	Calculates the new cell coordinates and stores in nX & nY for immediate use
 	Takes care not to overflow to the right or bottom.
 	**/
-	void previousCell( int x, int y ) // ready 12 3 14
+	void previousCell( int x, int y ) // ready 12 3 17
 	{
 		if ( x > 0 )
 		{
@@ -152,9 +164,10 @@ public class Sudoku
 		else
 			if ( y > 0 )
 			{
-				nX = valLIMIT; // x wraps back to valLimit
+				nX = valLIMIT - 1; // x wraps back to "valLimit"
 				nY = y - 1;
 			}
+		// 0,0 handled by thisNotFirstCell
 	}
 	
 	boolean thisNotLastCell( int x, int y ) // ready 12 2 29
@@ -178,7 +191,7 @@ public class Sudoku
 		return guess > clueOFFSET;
 	}
 	
-	boolean conflicts( int x, int y ) // ready 12 2 29
+	boolean guessConflicts( int x, int y ) // ready 12 2 29
 	{
 		boolean conflictFound = true;
 		//
@@ -236,7 +249,7 @@ public class Sudoku
 	{
 		boolean conflictFound = true;
 		int candidate = guess[ focusX ][ focusY ];
-		int compareVal = 0;
+		int compareVal;
 		upperLeftCorner( focusX, focusY );
 		for ( int row = nX; row < sqXLIMIT + nX; row++ )
 			for ( int cell = nY; cell < sqYLIMIT + nY; cell++ )
