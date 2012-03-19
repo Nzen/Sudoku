@@ -9,7 +9,7 @@ public class Sudoku
 	private int nX; // vars for next or previous cell; changed by solve( ) & upperLeftCorner
 	private int nY;
 	private int guess[ ][ ];
-	private boolean success;
+	private boolean success = true;
 	
 	public Sudoku( String clueFile ) // ready 12 3 3
 	{
@@ -25,7 +25,6 @@ public class Sudoku
 			for ( int cell = 0; cell < valLIMIT; cell++ )
 				inputClue( row, cell, clues.readInt( ) );
 		clues.close( );
-		success = true;
 	}
 
 	void checkLimits( ) // ready 12 2 29
@@ -63,7 +62,8 @@ public class Sudoku
 
 	public void run( ) // ready 12 3 3
 	{	// change to display & interactive mode when solve works
-		if ( solve( 0, 0, false ) ) //backtrack )
+		//if ( solve( 0, 0, false ) ) //backtrack )
+		if ( solveIteratively( ) )
 			outputSolution( );
 		else 
 			System.out.print( "I didn't solve it" );
@@ -72,14 +72,19 @@ public class Sudoku
 	/**
 	 * Time/Space: time bartered for now: lots of math 
 	 **/
-	boolean solve( int x, int y, boolean backtracking ) // stopped early? 12 3 17
+	boolean solve( int x, int y, boolean backtracking ) // hmm 12 3 18
 	{
 		if ( clueCell( x, y ) )
 		{
 			if ( backtracking )
 			{
-				previousCell( x, y );
-				return solve( nX, nY, backtracking );
+				if ( thisNotFirstCell( x, y ) )
+				{
+					previousCell( x, y );
+					return solve( nX, nY, backtracking );
+				}
+				else // backtracked to start
+					return !success; // everything tested, nothing worked
 			}
 			else if ( thisNotLastCell( x, y ) )
 			{	// move to next
@@ -108,7 +113,6 @@ public class Sudoku
 				backtracking = true;
 				if ( thisNotFirstCell( x, y ) )
 				{
-					guess[ x ][ y ] = 0; // reset this cell
 					previousCell( x, y );
 					return solve( nX, nY, backtracking );
 				}
@@ -118,7 +122,7 @@ public class Sudoku
 		}
 	}
 	
-	boolean foundValidGuess( int x, int y ) // maybe 12 3 16
+	boolean foundValidGuess( int x, int y ) // maybe 12 3 18
 	{
 		while ( guess[ x ][ y ] < valLIMIT )
 		{
@@ -128,6 +132,7 @@ public class Sudoku
 			else
 				return true;
 		}
+		guess[ x ][ y ] = 0; // reset this cell
 		return false;
 	}
 
@@ -306,6 +311,68 @@ public class Sudoku
 			System.out.println( );
 		}
 		System.out.print( "\n==\n" );
+	}
+	
+	// I must test my logic in a more controlled manner, don't want to branch either
+	boolean solveIteratively( ) // 'works' 12 3 18
+	{
+		int x = 0;
+		int y = 0;
+		boolean backtracking = false;
+		while ( true )
+		{
+			if ( clueCell( x, y ) )
+			{
+				if ( backtracking )
+				{
+					previousCell( x, y );
+					x = nX;
+					y = nY;
+					continue; // to previous
+				}
+				else if ( thisNotLastCell( x, y ) )
+				{	// move to next
+					nextCell( x, y );
+					x = nX;
+					y = nY;
+					continue; // to next
+				}
+				else
+					return success; // last cell was a clue
+			}
+			else
+			{	// cell open for guessing
+				if ( foundValidGuess( x, y ) )
+				{
+					backtracking = false;
+					if ( thisNotLastCell( x, y ) )
+					{
+						nextCell( x, y );
+						showGrid( );
+						x = nX;
+						y = nY;
+						continue; // to next
+					}
+					else
+						return success; // this guess was last, nothing conflicts
+				}
+				else // exhausted possibilities in this cell
+				{
+					backtracking = true;
+					if ( thisNotFirstCell( x, y ) )
+					{
+						guess[ x ][ y ] = 0; // reset this cell
+						previousCell( x, y );
+						x = nX;
+						y = nY;
+						System.out.printf( "-- backtracking to (%d, %d)\n", x, y );
+						continue; // to previous
+					}
+					else // backtracked to start
+						return !success; // everything tested, nothing worked
+				}
+			}
+		}
 	}
 }
 
