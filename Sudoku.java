@@ -11,7 +11,7 @@ public class Sudoku
 	private int guess[ ][ ];
 	private boolean success = true;
 	
-	public Sudoku( String clueFile ) // ready 12 3 3
+	public Sudoku( String clueFile )
 	{
 		File4Stream clues = new File4Stream( );
 		clues.open( clueFile ); // "puzz.txt" ); //
@@ -27,16 +27,16 @@ public class Sudoku
 		clues.close( );
 	}
 
-	void checkLimits( ) // ready 12 2 29
+	void checkLimits( )
 	{
 		if ( valLIMIT != sqXLIMIT * sqYLIMIT )
 		{
-			System.out.print( "Invalid puzzle file, size and square limits conflict." );
+			System.out.print( "Invalid puzzle file: size and square limits conflict." );
 			System.exit( 1 );
 		}
 	}
 
-	void inputClue( int row, int cell, int val ) // ready 12 2 29
+	void inputClue( int row, int cell, int val )
 	{
 		guess[ row ][ cell ] = ( val > 0 ) ? val + clueOFFSET : val; // 0 OR clue + offset
 		// aren't ints initialized to 0?
@@ -60,7 +60,7 @@ public class Sudoku
 		printPort.closeFile( );
 	}
 
-	public void run( ) // ready 12 3 3
+	public void run( )
 	{	// change to display & interactive mode when solve works
 		//if ( solve( 0, 0, false ) ) //backtrack )
 		if ( solveIteratively( ) )
@@ -140,7 +140,7 @@ public class Sudoku
 	Calculates the new cell coordinates and stores in nX & nY for immediate use
 	Takes care not to overflow to the right or bottom.
 	**/
-	void nextCell( int x, int y ) // ready 12 3 14
+	void nextCell( int x, int y )
 	{
 		if ( x < valLIMIT - 1 )
 		{
@@ -159,7 +159,7 @@ public class Sudoku
 	Calculates the new cell coordinates and stores in nX & nY for immediate use
 	Takes care not to overflow to the right or bottom.
 	**/
-	void previousCell( int x, int y ) // ready 12 3 17
+	void previousCell( int x, int y )
 	{
 		if ( x > 0 )
 		{
@@ -175,28 +175,28 @@ public class Sudoku
 		// 0,0 handled by thisNotFirstCell
 	}
 	
-	boolean thisNotLastCell( int x, int y ) // ready 12 2 29
+	boolean thisNotLastCell( int x, int y )
 	{
 		return x < valLIMIT - 1 || y < valLIMIT - 1;
 	}
 	
-	boolean thisNotFirstCell( int x, int y ) // ready 12 2 29
+	boolean thisNotFirstCell( int x, int y )
 	{
 		return x > 0 || y > 0;
 	}
 	
 	/** returns true when cell contains a clue **/
-	boolean clueCell( int x, int y ) // ready 12 2 29
+	boolean clueCell( int x, int y )
 	{
 		return guess[ x ][ y ] > clueOFFSET;
 	}
 	
-	boolean clueVal( int guess ) // ready 12 3 3
+	boolean clueVal( int guess )
 	{
 		return guess > clueOFFSET;
 	}
 	
-	boolean guessConflicts( int x, int y ) // ready 12 2 29
+	boolean guessConflicts( int x, int y )
 	{
 		boolean conflictFound = true;
 		//
@@ -213,9 +213,10 @@ public class Sudoku
 	boolean aRowConflict( int focusX, int focusY ) // hmm 12 3 16
 	{
 		boolean conflictFound = true;
-		int candidate = guess[ focusX ][ focusY ];
+		int candidateVal = guess[ focusX ][ focusY ];
 		int compareVal;
 		for ( int cell = 0; cell < valLIMIT; cell++ )
+		{
 			if ( cell == focusY )
 				continue; // can't conflict with itself
 			else
@@ -224,9 +225,10 @@ public class Sudoku
 					compareVal = guess[ focusX ][ cell ] - clueOFFSET; // get value
 				else
 					compareVal = guess[ focusX ][ cell ]; // of the cell
-				if ( compareVal == candidate )
+				if ( compareVal == candidateVal )
 					return conflictFound;
 			}
+		}
 		return !conflictFound;
 	}
 	
@@ -234,8 +236,9 @@ public class Sudoku
 	{
 		boolean conflictFound = true;
 		int candidate = guess[ focusX ][ focusY ];
-		int compareVal = 0; // garbage
+		int compareVal;
 		for ( int row = 0; row < valLIMIT; row++ )
+		{
 			if ( row == focusX )
 				continue;
 			else
@@ -247,19 +250,39 @@ public class Sudoku
 				if ( compareVal == candidate )
 					return conflictFound;
 			}
+		}
 		return !conflictFound;
 	}
 	
-	boolean aSquareConflict( int focusX, int focusY ) // hmm 12 3 16
+	/*	github	mattrajca	sudoku-solver
+	int valid (int row, int col, int val) {
+	for (int n = 0; n < kRows; n++) {
+		if (grid[n][col] == val || grid[row][n] == val)
+			return 0;
+		}
+	int sRow = (row / kBoxWidth) * kBoxWidth;
+	int sCol = (col / kBoxWidth) * kBoxWidth;
+
+	for (int r = sRow; r < sRow + kBoxWidth; r++) {
+		for (int c = sCol; c < sCol + kBoxWidth; c++) {
+			if (grid[r][c] == val)
+				return 0;
+		}
+	}
+	*/
+	
+	boolean aSquareConflict( int focusX, int focusY ) // problem in here? 12 5 1
 	{
 		boolean conflictFound = true;
 		int candidate = guess[ focusX ][ focusY ];
 		int compareVal;
 		upperLeftCorner( focusX, focusY );
 		for ( int row = nX; row < sqXLIMIT + nX; row++ )
+		{
 			for ( int cell = nY; cell < sqYLIMIT + nY; cell++ )
+			{
 				if ( row == focusX && cell == focusY )
-					continue;
+					continue; // cause its the cell
 				else
 				{
 					if ( clueCell( row, cell ) )
@@ -269,29 +292,19 @@ public class Sudoku
 					if ( compareVal == candidate )
 						return conflictFound;
 				}
+			}
+		}
 		return !conflictFound; // success
 	}
-	
-	void upperLeftCorner( int x, int y ) // ready 12 3 14
+
+	//int sRow = (row / kBoxWidth) * kBoxWidth;
+	//int sCol = (col / kBoxWidth) * kBoxWidth;
+	//for (int r = sRow; r < sRow + kBoxWidth; r++)
+
+	void upperLeftCorner( int x, int y )
 	{
-		// find the x distance from nearest multiple
-		for ( int multiple = 1; multiple <= sqXLIMIT; multiple++ )
-		{
-			if ( ( multiple * sqXLIMIT ) > x ) // 3 > 2
-			{
-				nX = ( multiple - 1 ) * sqXLIMIT; // 1-1 * 3 = 0
-				break;
-			}
-		}
-		// find the y distance from nearest multiple
-		for ( int multiple = 1; multiple <= sqYLIMIT; multiple++ )
-		{
-			if ( ( multiple * sqYLIMIT ) > x ) // 3 > 2
-			{
-				nY = ( multiple - 1 ) * sqYLIMIT; // 1-1 * 3 = 0
-				break;
-			}
-		}
+		nX = ( x / sqXLIMIT ) * sqXLIMIT;
+		nY = ( y / sqYLIMIT ) * sqYLIMIT;
 	}
 
 	int getNx( )
@@ -337,9 +350,9 @@ public class Sudoku
 					y = nY;
 					continue; // to next
 				}
-				else
+				else{showGrid( );
 					return success; // last cell was a clue
-			}
+				}			}
 			else
 			{	// cell open for guessing
 				if ( foundValidGuess( x, y ) )
@@ -348,14 +361,14 @@ public class Sudoku
 					if ( thisNotLastCell( x, y ) )
 					{
 						nextCell( x, y );
-						showGrid( );
+						//showGrid( );
 						x = nX;
 						y = nY;
 						continue; // to next
 					}
-					else
+					else{showGrid( );
 						return success; // this guess was last, nothing conflicts
-				}
+				}	}
 				else // exhausted possibilities in this cell
 				{
 					backtracking = true;
@@ -365,7 +378,7 @@ public class Sudoku
 						previousCell( x, y );
 						x = nX;
 						y = nY;
-						System.out.printf( "-- backtracking to (%d, %d)\n", x, y );
+						//System.out.printf( "-- backtracking to (%d, %d)\n", x, y );
 						continue; // to previous
 					}
 					else // backtracked to start
@@ -375,20 +388,3 @@ public class Sudoku
 		}
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
