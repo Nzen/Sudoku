@@ -2,10 +2,9 @@ package sudoku;
 
 public class Sudoku
 {
-	private int valLIMIT; // a single limit implies a square puzzle
-	private int clueOFFSET = 20; // also, ALLCAPS is ugly, I'm trying this out
-	private int sqXLIMIT;
-	private int sqYLIMIT; // used in squareConflict( ), assumes rectangular
+	private int valLIMIT;
+	private int sqXLIMIT; // used in squareConflict( ), important in asymmetric rectangles
+	private int sqYLIMIT;
 	private int nX; // vars for next or previous cell; changed by solve( ) & upperLeftCorner
 	private int nY;
 	private int guess[ ][ ];
@@ -38,8 +37,8 @@ public class Sudoku
 
 	void inputClue( int row, int cell, int val )
 	{
-		guess[ row ][ cell ] = ( val > 0 ) ? val + clueOFFSET : val; // 0 OR clue + offset
-		// aren't ints initialized to 0?
+		guess[ row ][ cell ] = ( val > 0 ) ? val * -1 : val; // 0 OR -#
+		// aren't int arrays already initialized to 0?
 	}
 	
 	void outputSolution( )
@@ -52,7 +51,7 @@ public class Sudoku
 		{
 			for( int guessVal : rows )
 				if ( clueVal( guessVal ) )
-					printPort.output( Integer.toString( guessVal - clueOFFSET ), !newline );
+					printPort.output( Integer.toString( guessVal * -1 ), !newline );
 				else // print normally
 					printPort.output( Integer.toString( guessVal ), !newline );
 			printPort.output( "", newline );
@@ -62,7 +61,7 @@ public class Sudoku
 
 	public void run( )
 	{	// change to display & interactive mode when solve works
-		//if ( solve( 0, 0, false ) ) //backtrack )
+		//if ( solve( 0, 0, false ) ) //backtrack
 		if ( solveIteratively( ) )
 			outputSolution( );
 		else 
@@ -72,7 +71,7 @@ public class Sudoku
 	/**
 	 * Time/Space: time bartered for now: lots of math 
 	 **/
-	boolean solve( int x, int y, boolean backtracking ) // hmm 12 3 18
+	boolean solve( int x, int y, boolean backtracking ) // works 12 5 2
 	{
 		if ( clueCell( x, y ) )
 		{
@@ -84,7 +83,7 @@ public class Sudoku
 					return solve( nX, nY, backtracking );
 				}
 				else // backtracked to start
-					return !success; // everything tested, nothing worked
+					return !success; // everything else tested, clue can't change
 			}
 			else if ( thisNotLastCell( x, y ) )
 			{	// move to next
@@ -102,7 +101,6 @@ public class Sudoku
 				if ( thisNotLastCell( x, y ) )
 				{
 					nextCell( x, y );
-					showGrid( );
 					return solve( nX, nY, backtracking );
 				}
 				else
@@ -113,6 +111,7 @@ public class Sudoku
 				backtracking = true;
 				if ( thisNotFirstCell( x, y ) )
 				{
+					guess[ x ][ y ] = 0; // reset this cell
 					previousCell( x, y );
 					return solve( nX, nY, backtracking );
 				}
@@ -122,7 +121,68 @@ public class Sudoku
 		}
 	}
 	
-	boolean foundValidGuess( int x, int y ) // maybe 12 3 18
+	// because recursive solution overflows past 6x6, iterative wins
+	boolean solveIteratively( ) // works 12 5 1
+	{
+		int x = 0;
+		int y = 0;
+		boolean backtracking = false;
+		while ( true )
+		{
+			if ( clueCell( x, y ) )
+			{
+				if ( backtracking ) // that's funny, shouldn't I test if this is first cell?
+				{
+					previousCell( x, y );
+					x = nX;
+					y = nY;
+					continue; // to previous
+				}
+				else if ( thisNotLastCell( x, y ) )
+				{	// move to next
+					nextCell( x, y );
+					x = nX;
+					y = nY;
+					continue; // to next
+				}
+				else
+					return success; // last cell was a clue
+			}
+			else
+			{	// cell open for guessing
+				if ( foundValidGuess( x, y ) )
+				{
+					backtracking = false;
+					if ( thisNotLastCell( x, y ) )
+					{
+						nextCell( x, y );
+						//showGrid( );
+						x = nX;
+						y = nY;
+						continue; // to next
+					}
+					else	//{showGrid( );
+						return success; // this guess was last, nothing conflicts
+				}
+				else // exhausted possibilities in this cell
+				{
+					backtracking = true;
+					if ( thisNotFirstCell( x, y ) )
+					{
+						guess[ x ][ y ] = 0; // reset this cell
+						previousCell( x, y );
+						x = nX;
+						y = nY;
+						continue; // to previous
+					}
+					else // backtracked to start
+						return !success; // everything tested, nothing worked
+				}
+			}
+		}
+	}
+	
+	boolean foundValidGuess( int x, int y )
 	{
 		while ( guess[ x ][ y ] < valLIMIT )
 		{
@@ -188,12 +248,12 @@ public class Sudoku
 	/** returns true when cell contains a clue **/
 	boolean clueCell( int x, int y )
 	{
-		return guess[ x ][ y ] > clueOFFSET;
+		return guess[ x ][ y ] < 0;
 	}
 	
 	boolean clueVal( int guess )
 	{
-		return guess > clueOFFSET;
+		return guess < 0;
 	}
 	
 	boolean guessConflicts( int x, int y )
@@ -210,7 +270,7 @@ public class Sudoku
 			return !conflictFound; // success
 	}
 	
-	boolean aRowConflict( int focusX, int focusY ) // hmm 12 3 16
+	boolean aRowConflict( int focusX, int focusY )
 	{
 		boolean conflictFound = true;
 		int candidateVal = guess[ focusX ][ focusY ];
@@ -222,7 +282,7 @@ public class Sudoku
 			else
 			{
 				if ( clueCell( focusX, cell ) )
-					compareVal = guess[ focusX ][ cell ] - clueOFFSET; // get value
+					compareVal = guess[ focusX ][ cell ] * -1; // get value
 				else
 					compareVal = guess[ focusX ][ cell ]; // of the cell
 				if ( compareVal == candidateVal )
@@ -232,7 +292,7 @@ public class Sudoku
 		return !conflictFound;
 	}
 	
-	boolean aVerticalConflict( int focusX, int focusY ) // hmm 12 3 16
+	boolean aVerticalConflict( int focusX, int focusY )
 	{
 		boolean conflictFound = true;
 		int candidate = guess[ focusX ][ focusY ];
@@ -244,7 +304,7 @@ public class Sudoku
 			else
 			{
 				if ( clueCell( row, focusY ) )
-					compareVal = guess[ row ][ focusY ] - clueOFFSET;
+					compareVal = guess[ row ][ focusY ] * -1;
 				else
 					compareVal = guess[ row ][ focusY ];
 				if ( compareVal == candidate )
@@ -254,24 +314,7 @@ public class Sudoku
 		return !conflictFound;
 	}
 	
-	/*	github	mattrajca	sudoku-solver
-	int valid (int row, int col, int val) {
-	for (int n = 0; n < kRows; n++) {
-		if (grid[n][col] == val || grid[row][n] == val)
-			return 0;
-		}
-	int sRow = (row / kBoxWidth) * kBoxWidth;
-	int sCol = (col / kBoxWidth) * kBoxWidth;
-
-	for (int r = sRow; r < sRow + kBoxWidth; r++) {
-		for (int c = sCol; c < sCol + kBoxWidth; c++) {
-			if (grid[r][c] == val)
-				return 0;
-		}
-	}
-	*/
-	
-	boolean aSquareConflict( int focusX, int focusY ) // problem in here? 12 5 1
+	boolean aSquareConflict( int focusX, int focusY )
 	{
 		boolean conflictFound = true;
 		int candidate = guess[ focusX ][ focusY ];
@@ -286,7 +329,7 @@ public class Sudoku
 				else
 				{
 					if ( clueCell( row, cell ) )
-						compareVal = guess[ row ][ cell ] - clueOFFSET;
+						compareVal = guess[ row ][ cell ] * -1;
 					else
 						compareVal = guess[ row ][ cell ];
 					if ( compareVal == candidate )
@@ -297,15 +340,11 @@ public class Sudoku
 		return !conflictFound; // success
 	}
 
-	//int sRow = (row / kBoxWidth) * kBoxWidth;
-	//int sCol = (col / kBoxWidth) * kBoxWidth;
-	//for (int r = sRow; r < sRow + kBoxWidth; r++)
-
 	void upperLeftCorner( int x, int y )
 	{
 		nX = ( x / sqXLIMIT ) * sqXLIMIT;
 		nY = ( y / sqYLIMIT ) * sqYLIMIT;
-	}
+	}	// credit to github	mattrajca	sudoku-solver
 
 	int getNx( )
 	{	return nX;	}
@@ -324,67 +363,5 @@ public class Sudoku
 			System.out.println( );
 		}
 		System.out.print( "\n==\n" );
-	}
-	
-	// I must test my logic in a more controlled manner, don't want to branch either
-	boolean solveIteratively( ) // 'works' 12 3 18
-	{
-		int x = 0;
-		int y = 0;
-		boolean backtracking = false;
-		while ( true )
-		{
-			if ( clueCell( x, y ) )
-			{
-				if ( backtracking )
-				{
-					previousCell( x, y );
-					x = nX;
-					y = nY;
-					continue; // to previous
-				}
-				else if ( thisNotLastCell( x, y ) )
-				{	// move to next
-					nextCell( x, y );
-					x = nX;
-					y = nY;
-					continue; // to next
-				}
-				else{showGrid( );
-					return success; // last cell was a clue
-				}			}
-			else
-			{	// cell open for guessing
-				if ( foundValidGuess( x, y ) )
-				{
-					backtracking = false;
-					if ( thisNotLastCell( x, y ) )
-					{
-						nextCell( x, y );
-						//showGrid( );
-						x = nX;
-						y = nY;
-						continue; // to next
-					}
-					else{showGrid( );
-						return success; // this guess was last, nothing conflicts
-				}	}
-				else // exhausted possibilities in this cell
-				{
-					backtracking = true;
-					if ( thisNotFirstCell( x, y ) )
-					{
-						guess[ x ][ y ] = 0; // reset this cell
-						previousCell( x, y );
-						x = nX;
-						y = nY;
-						//System.out.printf( "-- backtracking to (%d, %d)\n", x, y );
-						continue; // to previous
-					}
-					else // backtracked to start
-						return !success; // everything tested, nothing worked
-				}
-			}
-		}
 	}
 }
